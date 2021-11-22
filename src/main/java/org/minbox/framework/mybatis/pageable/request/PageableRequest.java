@@ -38,19 +38,15 @@ public class PageableRequest extends AbstractPageableRequest {
 
     @Override
     public <T> Page<T> request(LogicFunction function) {
-        if (PageLocalContext.isStarting()) {
-            try {
-                function.invoke();
-                return (Page<T>) PageLocalContext.getPageInstance();
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-            } finally {
-                if (PageLocalContext.isStarting()) {
-                    PageLocalContext.stopPaging();
-                }
+        try {
+            function.invoke();
+            return (Page<T>) PageLocalContext.getPageInstance();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        } finally {
+            if (PageLocalContext.isStarting()) {
+                PageLocalContext.stopPaging();
             }
-        } else {
-            log.warn("There is no page replica instance in PageLocalContext.");
         }
         return DefaultPage.instance(this);
     }
