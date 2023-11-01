@@ -79,7 +79,7 @@ public class MyBatisExecutePageableInterceptor implements Interceptor {
         }
 
         // 构建请求对象
-        ExecutorQueryRequest queryRequest = buildExecutorQueryRequest(args);
+        ExecutorQueryRequest queryRequest = buildExecutorQueryRequest(executor, args);
 
         // 执行分页查询 & 设置到分页响应对象
         pageable.setData(executeQuery(executor, queryRequest, pageable, dialectCache));
@@ -94,26 +94,32 @@ public class MyBatisExecutePageableInterceptor implements Interceptor {
     /**
      * 构建执行器查询时的请求对象
      *
-     * @param args 本次拦截Executor.query方法的参数数组
+     * @param executor 拦截的执行对象实例
+     * @param args     本次拦截Executor.query方法的参数数组
      * @return 执行器查询请求对象
      */
-    private ExecutorQueryRequest buildExecutorQueryRequest(Object[] args) {
-        // MappedStatement对象实例
+    private ExecutorQueryRequest buildExecutorQueryRequest(Executor executor, Object[] args) {
         MappedStatement statement = (MappedStatement) args[0];
-        // 执行查询时携带的参数实体或者参数Map集合
         Object parameter = args[1];
-        // 行绑定信息
         RowBounds rowBounds = RowBounds.DEFAULT;
-        // 返回结果处理对象
         ResultHandler resultHandler = (ResultHandler) args[3];
-        // boundSql
-        BoundSql boundSql = statement.getBoundSql(parameter);
+        CacheKey cacheKey;
+        BoundSql boundSql;
+        if (args.length == 4) {
+            boundSql = statement.getBoundSql(parameter);
+            cacheKey = executor.createCacheKey(statement, parameter, rowBounds, boundSql);
+        } else {
+            cacheKey = (CacheKey) args[4];
+            // 使用传递的BoundSQL
+            boundSql = (BoundSql) args[5];
+        }
         return new ExecutorQueryRequest()
                 .setStatement(statement)
                 .setParameter(parameter)
                 .setRowBounds(rowBounds)
                 .setResultHandler(resultHandler)
-                .setBoundSql(boundSql);
+                .setBoundSql(boundSql)
+                .setCacheKey(cacheKey);
     }
 
     /**
